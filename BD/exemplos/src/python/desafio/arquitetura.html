@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Arquitetura do Sistema de Monitoramento de Tráfego e Análise de Dados</title>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "default" });
+  </script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 24px;
+      color: #333;
+    }
+    .mermaid {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 95%;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Arquitetura do Sistema de Monitoramento de Tráfego e Análise de Dados</h1>
+
+  <pre class="mermaid">
+graph TD
+    %% 1. Camada de Produção (Simulador/Produtor)
+    subgraph Producao [Producao de Dados]
+        A[Simulador de Veiculos] --> B(Produtor Kafka)
+    end
+    
+    %% 2. Camada de Streaming (Kafka)
+    B --> C{{Kafka Broker / Topico dados_veiculos}}
+    
+    %% 3. Camada de Aplicação (Backend Flask)
+    subgraph Backend [Backend API Python Flask Porta 5001]
+        D[Consumidor Kafka] --> E[(Cache In-Memory Ultimo Estado)]
+        E --> F[Endpoint REST /dados_veiculos]
+    end
+    
+    C -->|Consumo continuo| D
+    
+    %% 4. Camada de Apresentação (Frontend Web)
+    subgraph Frontend [Frontend Visualizacao Web]
+        F -->|HTTP Polling 5s| G[Browser HTML/JS]
+        G --> H((Mapa Leaflet / Marcadores Animados))
+    end
+    
+    %% Estilos
+    classDef producer fill:#ffcc80,stroke:#e65100,color:#000;
+    classDef kafka fill:#81d4fa,stroke:#01579b,color:#fff;
+    classDef backend fill:#c8e6c9,stroke:#388e3c,color:#000;
+    classDef frontend fill:#e1bee7,stroke:#6a1b9a,color:#000;
+    
+    class A,B producer
+    class C kafka
+    class D,E,F backend
+    class G,H frontend
+  </pre>
+</body>
+</html>

@@ -1,0 +1,36 @@
+version: '3.9'
+
+services:
+  oracle-xe:
+    image: gvenzl/oracle-xe:21  # ✅ Multi-arch (works on ARM and x86)
+    container_name: oracle-xe
+    restart: unless-stopped
+    environment:
+      ORACLE_PASSWORD: oracle            # SYSTEM and SYS password
+      APP_USER: app_user                 # Optional: create app user
+      APP_USER_PASSWORD: app_pass        # App user password
+      ORACLE_CHARACTERSET: AL32UTF8      # Recommended charset
+    ports:
+      - "1521:1521"   # Database (JDBC/SQL*Net)
+      - "5500:5500"   # Oracle Enterprise Manager Express
+    volumes:
+      - oracle-data:/opt/oracle/oradata  # Persistent data
+    shm_size: 1g  # Shared memory required for Oracle background processes
+
+  dbeaver:
+    image: dbeaver/cloudbeaver:latest
+    container_name: dbeaver-web
+    ports:
+      - "8978:8978"   # Web UI: http://localhost:8978
+    environment:
+      CB_SERVER_NAME: "DBeaver Web"
+      CB_ADMIN_NAME: "admin"
+      CB_ADMIN_PASSWORD: "admin"
+    volumes:
+      # Persist user settings, connections, and workspaces
+      - dbeaver_data:/opt/cloudbeaver/workspace
+    restart: always
+
+volumes:
+  oracle-data:
+  dbeaver_data:
