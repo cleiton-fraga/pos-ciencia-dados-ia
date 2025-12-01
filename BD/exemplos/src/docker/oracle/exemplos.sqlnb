@@ -1,0 +1,14 @@
+cells:
+  - kind: 2
+    value: |+
+      SELECT mat_alu as "Matricula",
+             nom_alu as "Nome",
+             mgp as "Media ponderada"
+      FROM ACADEMICO.ALUNOS
+      WHERE cod_curso = 4 and mgp > 7;
+
+
+
+
+
+    languageId: oracle-sql

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento de Tráfego</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc;
+        }
+        #map {
+            width: 100%;
+            height: 70vh;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+                        0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .pulse-animation {
+            animation: pulse-scale 2s infinite ease-in-out;
+            transform-origin: bottom center;
+            display: inline-block;
+        }
+        @keyframes pulse-scale {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.8; }
+        }
+        .custom-div-icon {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body class="p-4 sm:p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Monitoramento de Frota em Tempo Real</h1>
+        <p class="text-gray-600 mb-4">Visualização de veículos com dados vindos de um broker Kafka via API REST.</p>
+        
+        <!-- Seletor de Veículos -->
+        <div class="mb-6">
+            <label for="vehicle-select" class="block text-sm font-medium text-gray-700 mb-2">Selecionar Veículo para Navegar:</label>
+            <select id="vehicle-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                <option value="">-- Todos os Veículos --</option>
+            </select>
+        </div>
+
+        <!-- Status -->
+        <div id="status-container" class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded-md shadow-sm" role="alert">
+            <p id="last-update-time" class="font-medium text-sm">Aguardando primeira atualização...</p>
+        </div>
+
+        <!-- Mapa -->
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        const API_URL = 'http://localhost:5001/dados_veiculos';
+        const UPDATE_INTERVAL = 5000;
+        const INITIAL_LAT = -23.5505;  
+        const INITIAL_LNG = -46.6333;  
+
+        const map = L.map('map').setView([INITIAL_LAT, INITIAL_LNG], 12); 
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap | Dados de Veículos'
+        }).addTo(map);
+
+        let markers = {};
+        const lastUpdateTimeElement = document.getElementById('last-update-time');
+        const statusContainer = document.getElementById('status-container');
+        const vehicleSelect = document.getElementById('vehicle-select');
+
+        function formatTimestamp(unixTimestamp) {
+            if (typeof unixTimestamp !== 'number') return 'N/A';
+            const date = new Date(unixTimestamp * 1000); 
+            return date.toLocaleTimeString('pt-BR');
+        }
+
+        const vehicleIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div class="pulse-animation" style="color: #1d4ed8; font-size: 40px;"><i class="fas fa-truck"></i></div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 40]
+        });
+
+        function addMarker(lat, lng, id, speed, timestamp) {
+            let marker = markers[id];
+            const formattedTime = formatTimestamp(timestamp);
+            const popupContent = `
+                <div class="font-sans text-sm">
+                    <strong class="text-base text-indigo-600">Veículo ID: ${id}</strong><br>
+                    <span class="font-medium">Velocidade:</span> ${speed} km/h<br>
+                    <span class="font-medium">Último Visto:</span> ${formattedTime}
+                </div>
+            `;
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+                marker.setPopupContent(popupContent);
+            } else {
+                marker = L.marker([lat, lng], {icon: vehicleIcon})
+                    .addTo(map)
+                    .bindPopup(popupContent);
+                markers[id] = marker; 
+            }
+        }
+
+        function updateVehicleSelector(activeIds) {
+            const currentValue = vehicleSelect.value;
+            const uniqueIds = [...new Set(activeIds)]; // 🔑 Garante unicidade
+            vehicleSelect.innerHTML = '<option value="">-- Todos os Veículos --</option>';
+            uniqueIds.sort((a, b) => a - b).forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = `Veículo ${id}`;
+                vehicleSelect.appendChild(option);
+            });
+            if (uniqueIds.includes(parseInt(currentValue))) {
+                vehicleSelect.value = currentValue;
+            }
+        }
+
+        function handleVehicleSelect(event) {
+            const selectedId = event.target.value;
+            if (selectedId) {
+                const marker = markers[selectedId];
+                if (marker) {
+                    map.flyTo(marker.getLatLng(), 15, {duration: 1.5});
+                    marker.openPopup();
+                }
+            }
+        }
+        vehicleSelect.addEventListener('change', handleVehicleSelect);
+
+        async function fetchVeiculos() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error(`Erro de rede: ${response.status} ${response.statusText}`);
+                const data = await response.json();
+
+                // 🔑 Garante unicidade dos IDs
+                const currentIds = [...new Set(data.map(v => v.idveiculo))];
+
+                // Remove marcadores que sumiram
+                Object.keys(markers).forEach(id => {
+                    if (!currentIds.includes(parseInt(id))) { 
+                        map.removeLayer(markers[id]);
+                        delete markers[id];
+                    }
+                });
+                
+                let validVehicles = 0;
+                data.forEach(vehicle => {
+                    const id = vehicle.idveiculo; 
+                    const lat = parseFloat(vehicle.latitude);
+                    const lng = parseFloat(vehicle.longitude);
+                    const speed = vehicle.velocidade || 'N/A';
+                    const timestamp = vehicle.timestamp; 
+                    if (!isNaN(lat) && !isNaN(lng) && id) {
+                        addMarker(lat, lng, id, speed, timestamp);
+                        validVehicles++;
+                    }
+                });
+
+                updateVehicleSelector(currentIds);
+
+                const now = new Date();
+                lastUpdateTimeElement.textContent = `Última Atualização: ${now.toLocaleTimeString('pt-BR')} | ${validVehicles} veículos ativos.`;
+                statusContainer.classList.replace('bg-red-100', 'bg-blue-100');
+                statusContainer.classList.replace('border-red-500', 'border-blue-500');
+                statusContainer.classList.replace('text-red-700', 'text-blue-700');
+            } catch (error) {
+                console.error("Erro ao buscar dados dos veículos:", error);
+                lastUpdateTimeElement.textContent = `Erro ao buscar dados: ${error.message}.`;
+                statusContainer.classList.replace('bg-blue-100', 'bg-red-100');
+                statusContainer.classList.replace('border-blue-500', 'border-red-500');
+                statusContainer.classList.replace('text-blue-700', 'text-red-700');
+            }
+        }
+        
+        fetchVeiculos();
+        setInterval(fetchVeiculos, UPDATE_INTERVAL);
+    </script>
+</body>
+</html>
