@@ -61,7 +61,7 @@ LIMIT 50;
 (Alternativa adicional frequente) **Avaliações recentes de um produto:** `reviews_by_product` com partition `product_id` e clustering `created_at DESC` para feeds rápidos.
 
 ## 4. Por que Cassandra não usa JOIN e impacto na modelagem
-- O protocolo de leitura de Cassandra é otimizado para buscar linhas contíguas em uma partição; *joins* requereriam múltiplas partições e coordenação, degradando latência e throughput.
+- O protocolo de leitura de Cassandra é otimizado para buscar linhas contínuas em uma partição; *joins* requereriam múltiplas partições e coordenação, degradando latência e throughput.
 - Sem *joins*, a estratégia é **desnormalizar e duplicar** dados conforme a necessidade das consultas; cada tabela atende a um *query pattern* específico.
 - O desenho das chaves (partition/clustering) e a escolha de colunas embutidas (como `items` no pedido) substituem relações tradicionais, garantindo consultas O(1) ou O(log n) dentro da partição.
 
