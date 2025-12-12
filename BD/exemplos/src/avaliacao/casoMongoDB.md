@@ -259,6 +259,8 @@ Requisito: produtos de categorias diferentes (eletrônicos, roupas, livros, etc.
 
 ### 5. Pequeno diagrama de coleções e relações
 
+https://miro.com/app/board/uXjVIg9FsXY=/?focusWidget=3458764651877319306
+
 Um diagrama ASCII simples para representar as relações principais:
 
 ```text
