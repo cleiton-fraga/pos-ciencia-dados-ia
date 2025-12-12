@@ -1,15 +1,9 @@
 ## Estudo de Caso 1 — Modelagem de Dados com MongoDB (Marketplace)
 
-### 1. Padrões de acesso (query-driven) que guiam o schema
-- Listar produtos por categoria/atributo (`category`, `attributes.color`, `attributes.voltage`).
-- Ver detalhes do produto (com rating médio e tags).
-- Ver catálogo de um vendedor (via `sellerId`).
-- Histórico e detalhes de pedidos de um cliente (com itens, pagamento e entrega).
-- Mostrar avaliações mais recentes de um produto (ou resumo no próprio produto).
 
-### 2. Schemas JSON das coleções
+### 1. Schemas JSON das coleções
 
-#### 2.1. Coleção `users`
+#### 1.1. Coleção `users`
 
 ```json
 {
@@ -40,7 +34,7 @@
 
 ---
 
-#### 2.2. Coleção `products`
+#### 1.2. Coleção `products`
 
 ```json
 {
@@ -80,7 +74,7 @@
 
 ---
 
-#### 2.3. Coleção `orders`
+#### 1.3. Coleção `orders`
 
 ```json
 {
@@ -127,7 +121,7 @@
 
 ---
 
-### 3. Embedding vs Referencing
+### 2. Embedding vs Referencing
 
 #### Onde usar **embedding** (inclusão)
 
@@ -219,7 +213,7 @@ Duas abordagens comuns:
 
 ---
 
-### 4. Modelando produtos com atributos variáveis
+### 3. Modelando produtos com atributos variáveis
 
 Requisito: produtos de categorias diferentes (eletrônicos, roupas, livros, etc.) com **atributos específicos** sem ter que ficar alterando schema toda hora.
 
@@ -256,71 +250,3 @@ Requisito: produtos de categorias diferentes (eletrônicos, roupas, livros, etc.
   * Criaria índices específicos para atributos importantes de busca (ex.: `attributes.color`, `attributes.size`, `attributes.voltage`).
 
 ---
-
-### 5. Pequeno diagrama de coleções e relações
-
-Um diagrama ASCII simples para representar as relações principais:
-
-```text
-+-------------------+
-|      users        |
-+-------------------+
-| _id               |
-| type (customer/seller)
-| name              |
-| email             |
-| addresses [...]   |
-+---------+---------+
-          ^
-          | customerId
-          |
-+---------+---------+
-|       orders      |
-+-------------------+
-| _id               |
-| customerId  ------+
-| status            |
-| items [           |
-|   productId  -----+-------------------+
-|   productName     |                   |
-|   unitPrice       |                   |
-|   quantity        |                   |
-| ]                 |                   |
-| payment {...}     |                   |
-| shipping {...}    |                   |
-+-------------------+                   |
-                                        |
-                                        |
-                              +---------+---------+
-                              |      products     |
-                              +-------------------+
-                              | _id               |
-                              | sellerId ---------+--> users._id (seller)
-                              | name              |
-                              | price             |
-                              | stock             |
-                              | attributes {...}  |
-                              | rating {...}      |
-                              +-------------------+
-```
-
-Se você quiser considerar a coleção de avaliações separada (`reviews`), ela ficaria assim:
-
-```text
-+-------------------+
-|      reviews      |
-+-------------------+
-| _id               |
-| productId ------> products._id
-| userId    ------> users._id
-| rating            |
-| comment           |
-| createdAt         |
-+-------------------+
-```
-
-### 6. Índices sugeridos
-- `users`: `{ email: 1 }` único; `{ type: 1 }` para filtros simples.
-- `products`: `{ category: 1, 'price.amount': 1 }`; `{ sellerId: 1, 'price.amount': 1 }`; índices parciais ou compostos para atributos-chave de busca (ex.: `{ 'attributes.color': 1 }`, `{ 'attributes.voltage': 1 }`).
-- `orders`: `{ customerId: 1, createdAt: -1 }` para histórico; `{'items.productId': 1, createdAt: -1}` para localizar pedidos de um produto.
-- `reviews` (se separado): `{ productId: 1, createdAt: -1 }`; `{ userId: 1, createdAt: -1 }`.
