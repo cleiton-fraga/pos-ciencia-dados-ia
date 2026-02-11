@@ -1,4 +1,5 @@
 import json
+import random
 import re
 import time
 from datetime import datetime
@@ -17,6 +18,23 @@ DEFAULT_HEADERS = {
     "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
+USER_AGENTS = [
+    (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/123.0.0.0 Safari/537.36"
+    ),
+    (
+        "Mozilla/5.0 (X11; Linux x86_64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    ),
+]
 
 
 def fetch_html(url, session=None, timeout=20, retries=3, backoff_s=1.5):
@@ -25,7 +43,9 @@ def fetch_html(url, session=None, timeout=20, retries=3, backoff_s=1.5):
 
     for attempt in range(retries):
         try:
-            resp = session.get(url, headers=DEFAULT_HEADERS, timeout=timeout)
+            headers = dict(DEFAULT_HEADERS)
+            headers["User-Agent"] = random.choice(USER_AGENTS)
+            resp = session.get(url, headers=headers, timeout=timeout)
             if resp.status_code in (429, 503):
                 time.sleep(backoff_s * (attempt + 1))
                 continue
