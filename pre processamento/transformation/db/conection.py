@@ -7,10 +7,10 @@ import os
 load_dotenv()
 
 def get_engine():
-    URL_MYSQL = os.getenv("URL_MYSQL")
+    #URL_MYSQL = os.getenv("URL_MYSQL")
 
     return create_engine(
-        URL_MYSQL,
+        "test",
         pool_pre_ping=True,
     )
 
