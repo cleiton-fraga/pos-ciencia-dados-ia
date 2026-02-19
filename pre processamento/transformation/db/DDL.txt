@@ -1,0 +1,109 @@
+
+DROP TABLE IF EXISTS FATO_preco;
+DROP TABLE IF EXISTS BRIDGE_produto_listing;
+DROP TABLE IF EXISTS DIM_listing;
+DROP TABLE IF EXISTS DIM_tempo;
+DROP TABLE IF EXISTS DIM_marketplace;
+DROP TABLE IF EXISTS DIM_produto_canonico;
+
+
+CREATE TABLE DIM_produto_canonico (
+  sk_produto INT AUTO_INCREMENT PRIMARY KEY,
+  marca_canonico     VARCHAR(100),
+  nome_canonico      VARCHAR(255),
+  categoria_canonica VARCHAR(100),
+
+  UNIQUE KEY uq_produto_canonico (marca_canonico, nome_canonico, categoria_canonica)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE DIM_marketplace (
+  sk_marketplace INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(100) NOT NULL,
+  url  VARCHAR(200),
+
+  UNIQUE KEY uq_marketplace_nome (nome)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE DIM_tempo (
+  sk_tempo INT AUTO_INCREMENT PRIMARY KEY,
+  data_coleta DATE NOT NULL,
+
+  dia        TINYINT NOT NULL,
+  mes        TINYINT NOT NULL,
+  ano        SMALLINT NOT NULL,
+  semana     TINYINT NOT NULL
+
+  UNIQUE KEY uq_tempo_data (data_coleta)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE DIM_listing (
+  sk_listing INT AUTO_INCREMENT PRIMARY KEY,
+
+  sk_marketplace INT NOT NULL,
+  product_url VARCHAR(500) NOT NULL,
+
+  marca     VARCHAR(100),
+  categoria VARCHAR(100),
+  titulo    VARCHAR(255),
+
+  UNIQUE KEY uq_listing_url (product_url),
+
+  INDEX ix_listing_marketplace (sk_marketplace),
+
+  CONSTRAINT fk_listing_marketplace
+    FOREIGN KEY (sk_marketplace)
+    REFERENCES DIM_marketplace (sk_marketplace)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE BRIDGE_produto_listing (
+  sk_produto INT NOT NULL,
+  sk_listing INT NOT NULL,
+
+  match_score DECIMAL(5,2),
+  metodo VARCHAR(100),
+
+  PRIMARY KEY (sk_produto, sk_listing),
+
+  INDEX ix_bridge_listing (sk_listing),
+
+  CONSTRAINT fk_bridge_produto
+    FOREIGN KEY (sk_produto)
+    REFERENCES DIM_produto_canonico (sk_produto)
+    ON DELETE CASCADE,
+
+  CONSTRAINT fk_bridge_listing
+    FOREIGN KEY (sk_listing)
+    REFERENCES DIM_listing (sk_listing)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE FATO_preco (
+  sk_tempo   INT NOT NULL,
+  sk_listing INT NOT NULL,
+
+  preco      DECIMAL(12,2) NOT NULL,
+  avaliacao  DECIMAL(3,2),
+  em_estoque TINYINT(1) NOT NULL DEFAULT 0,
+
+  PRIMARY KEY (sk_tempo, sk_listing),
+
+  INDEX ix_fato_tempo_listing (sk_tempo, sk_listing),
+  INDEX ix_fato_listing_tempo (sk_listing, sk_tempo),
+
+  CONSTRAINT fk_fato_tempo
+    FOREIGN KEY (sk_tempo)
+    REFERENCES DIM_tempo (sk_tempo)
+    ON DELETE RESTRICT,
+
+  CONSTRAINT fk_fato_listing
+    FOREIGN KEY (sk_listing)
+    REFERENCES DIM_listing (sk_listing)
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

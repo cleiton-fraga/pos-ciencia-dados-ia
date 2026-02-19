@@ -1,0 +1,76 @@
+
+
+Tratamentos aplicados na transformação (Bronze → Silver)
+
+Na etapa de transformação dos dados (camada Silver), pegamos os arquivos brutos em JSON (camada Bronze) coletados do Mercado Livre e da Magalu 
+e aplicamos um conjunto de regras para padronizar, limpar e preparar os dados para análise e futura carga no modelo dimensional.
+A seguir detalho os tratamentos que realizamos nos dados coletados: 
+
+
+1)Padronização de schema (unificação de colunas)
+
+Mercado Livre → Silver
+
+SCRAPY_DATETIME → collected_at
+TITLE → title_raw
+CATEGORY → category_raw
+PRICE → price
+URL → url
+in_stock → in_stock
+source = "MERCADO_LIVRE"
+
+Magalu → Silver
+extracted_at → collected_at
+name → title_raw
+category (ou equivalente do JSON) → category_raw
+price → price
+product_url → url
+in_stock → in_stock
+source = "MAGALU"
+
+2)Normalização de URL
+A URL foi padronizada removendo ruídos (principalmente parâmetros):
+url original (com ?utm=...&ref=...) → url limpa
+
+3) Conversão e normalização de data/hora
+As datas foram convertidas para datetime real, aceitando tanto:
+formato simples (YYYY-MM-DD HH:MM:SS)
+quanto ISO 8601 com timezone (YYYY-MM-DDTHH:MM:SS-03:00)
+
+4) Tratamento e padronização de preço
+O preço foi convertido para número de forma confiável:
+strings do tipo "1.234,56" → 1234.56
+remove símbolos e separadores
+usa conversão segura (evita erro de ponto flutuante)
+
+5) Normalização de texto (apoio a matching e deduplicação)
+Foram criadas colunas derivadas:
+title_norm: título normalizado (minúsculo, sem acentos e sem pontuação)
+category_norm: categoria normalizada da mesma forma
+Essas colunas são úteis para comparação de produtos e padronização futura (produto canônico).
+
+6) Normalização de boolean (estoque) in_stock
+No Magalu (principalmente), in_stock podia vir nulo:
+in_stock = null → False
+e depois forçamos o tipo boolean
+
+7) Deduplicação
+Aplicamos deduplicação por:
+source + url
+Mantendo o registro mais recente (collected_at) quando houver duplicidade.
+Isso evita repetição do mesmo anúncio dentro do mesmo marketplace.
+
+8) Remoção de registros inválidos (filtro de qualidade)
+Para garantir que o dataset Silver tenha dados úteis, removemos registros onde:
+price é nulo
+url é vazio
+Assim, eliminamos linhas incompletas que não seriam analisáveis (ex.: itens sem preço ou sem link).
+O que ainda pode permanecer nulo na Silver
+Mesmo após o tratamento, alguns campos podem continuar nulos porque não são obrigatórios ou porque a fonte não fornece em todos os casos, por exemplo:
+rating (avaliação pode não estar presente em todos os itens)
+category_raw (algumas fontes não classificam todos os resultados)
+campos que não existem em uma fonte específica (ex.: source_url/availability na Magalu podem ficar vazios)
+
+Esses dois campos são tratados como obrigatórios porque sem eles:
+não dá pra montar uma Fato de preços (medida sem valor)
+não dá pra deduplicar/identificar o item (URL é um identificador prático)

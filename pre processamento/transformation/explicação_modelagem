@@ -1,0 +1,131 @@
+Na modelagem dimensional proposta, optamos por estruturar o Data Warehouse utilizando um modelo estrela com uma leve evolução 
+conceitual para melhorar a qualidade analítica dos dados.
+Criamos a tabela FATO_preco, que armazena as métricas principais do negócio: preço, avaliação e disponibilidade em estoque. 
+Essa tabela se relaciona com a dimensão tempo e com os produtos ofertados em cada marketplace.
+A dimensão DIM_tempo foi construída para permitir análises históricas, contendo atributos como data da coleta, dia, mês, ano e semana. 
+Isso possibilita análises como evolução de preços ao longo do tempo.
+A dimensão DIM_marketplace representa as lojas (Magalu, Mercado Livre etc.), contendo nome e URL. Isso permite comparar preços entre concorrentes.
+
+A principal evolução da modelagem foi a separação entre:
+DIM_produto_canonico
+DIM_listing
+O produto canônico representa o produto padronizado e normalizado, ou seja, a versão consolidada do item independentemente de como cada marketplace o descreve. 
+Isso é importante porque o mesmo produto pode aparecer com variações de nome, categoria ou descrição em diferentes sites.
+Já a DIM_listing representa a oferta específica de um produto dentro de um marketplace. Ela guarda informações como título original, 
+categoria original e URL daquele anúncio específico.
+
+Essa separação permite:
+Evitar duplicidade lógica de produtos
+Comparar corretamente o mesmo produto entre diferentes lojas
+Manter rastreabilidade da origem dos dados
+Melhorar a integridade analítica do modelo
+Para relacionar produtos canônicos com seus anúncios específicos, utilizamos uma tabela de associação (bridge), permitindo mapear múltiplos 
+anúncios ao mesmo produto padronizado.
+
+
+Dimensões
+1) DIM_tempo (dimensão de tempo)
+A dimensão tempo padroniza datas para facilitar agregações e filtros.
+Campos típicos:
+sk_tempo (chave substituta)
+data_coleta
+dia, mes, ano, semana
+
+Com essa dimensão, fica simples responder perguntas como:
+“Qual o preço médio por mês?”
+“Qual marketplace ficou mais barato no último trimestre?”
+“Como o preço variou por semana?”
+
+2) DIM_marketplace (dimensão de loja/fonte)
+Representa a origem dos dados (ex.: Mercado Livre, Magalu).
+Campos:
+sk_marketplace
+nome
+url
+Essa dimensão permite comparar preços por marketplace e também filtrar por fonte facilmente.
+
+3) DIM_listing (dimensão do anúncio / item na fonte)
+A tabela DIM_listing representa a oferta específica de 
+um produto dentro de um marketplace.
+A DIM_listing registra como o item aparece na fonte:
+
+Campos:
+sk_listing
+sk_marketplace (FK para a loja)
+product_url (URL do anúncio)
+marca, categoria, titulo
+Essa dimensão permite análises no nível do anúncio:
+“Qual anúncio tem melhor avaliação?”
+“Qual anúncio está sem estoque com mais frequência?”
+“Preço por anúncio dentro da mesma loja”
+
+Essa dimensão também mantém os dados originais do anúncio conforme 
+coletados no scraping.
+Ou seja:
+O produto canônico representa o “produto real”
+O listing representa “como aquele produto aparece naquela loja”
+
+4) DIM_produto_canonico (dimensão do produto padronizado)
+Como o mesmo produto pode aparecer com títulos diferentes em cada marketplace, foi criada a dimensão do produto canônico, que representa a versão “padronizada” usada para análise comparativa.
+Campos:
+sk_produto
+nome_canonico
+marca_canonico
+categoria_canonica
+O objetivo aqui é permitir análises do tipo:
+“Qual o preço do mesmo produto em lojas diferentes?”
+“Preço médio por marca/categoria padronizada”
+“Comparação entre Mercado Livre e Magalu para o mesmo item”
+
+
+5) BRIDGE_produto_listing
+Bridge (ponte) para conciliar produto canônico x anúncios
+Essa tabela existe para resolver um problema real:
+um produto canônico pode ter vários anúncios, e anúncios diferentes podem 
+representar o mesmo produto.
+Campos:
+sk_produto (FK)
+sk_listing (FK)
+match_score (pontuação de similaridade do match)
+metodo (como foi feito o match: regra, similaridade, manual, etc.)
+
+A bridge permite justificar e rastrear o relacionamento:
+“Este anúncio do Mercado Livre corresponde a este produto canônico com 
+92% de confiança”
+“Este match foi feito por título + marca”
+“Caso de revisão manual”
+Isso melhora muito a qualidade da análise e deixa o modelo realista 
+para dados de e-commerce.
+
+
+6) FATO_preco (fato de preços coletados) 
+A tabela FATO_preco é o centro do modelo dimensional.
+
+Chaves:
+sk_tempo (FK)
+sk_listing (FK)
+Medidas/atributos coletados:
+preco
+avaliacao
+em_estoque
+
+Esses campos foram colocados na fato porque podem variar ao longo do tempo.
+Por exemplo: a avaliação pode mudar, e o estoque com certeza muda. 
+Guardando isso como fato, preservamos histórico.
+
+Com isso, conseguimos análises como:
+“Preço mínimo/máximo por período”
+“Variação de preço por marketplace”
+“Correlação entre disponibilidade e preço”
+“Histórico de avaliação”
+
+---------------------------------------------------------------------
+
+A modelagem foi construída para:
+Padronizar produtos entre diferentes marketplaces
+Permitir análise temporal
+Comparar concorrentes
+Evitar duplicidade de produtos
+Garantir integridade analítica
+Ela segue o conceito de modelo estrela, com uma tabela fato central e dimensões 
+que fornecem contexto para análise.

@@ -42,9 +42,9 @@ def replace_property_value(
 
 if __name__ == "__main__":
     replace_property_value(
-        input_file="mercado_livre_tv_20260213.json",
-        output_file="mercado_livre_tv_20260213.json",
+        input_file="mercado_livre_fone_20260212.json",
+        output_file="mercado_livre_fone_20260212.json",
         property_name="CATEGORY",
-        new_value="tv",
+        new_value="fone",
         old_value=None  # Set to None to replace all values
     )
