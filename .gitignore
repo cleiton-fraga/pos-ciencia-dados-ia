@@ -4,3 +4,4 @@
 .github/instructions/snyk_rules.instructions.md
 
 *.env
+/pre processamento/transformation/db/
