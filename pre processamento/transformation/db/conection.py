@@ -1,10 +1,16 @@
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
+import os
 
+# Load environment variables from .env file
+load_dotenv()
 
 def get_engine():
+    URL_MYSQL = os.getenv("URL_MYSQL")
+
     return create_engine(
-        "mysql+mysqlconnector://avnadmin:REDACTED@mysql-20ddd402-souunit-a5aa.i.aivencloud.com:22384/defaultdb?",
+        URL_MYSQL,
         pool_pre_ping=True,
     )
 
