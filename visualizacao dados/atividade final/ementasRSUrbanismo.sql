@@ -1,8 +1,57 @@
 ---------- Consulta para extrair dados de emendas parlamentares relacionadas a urbanismo no estado do Rio Grande do Sul (RS) --------
-
 SELECT * FROM `basedosdados.br_cgu_emendas_parlamentares.microdados`
 where sigla_uf_gasto = 'RS'
-and nome_funcao like '%Urbanismo%'
-and nome_subfuncao like '%infra-estrutura urbana%'
-and id_municipio_gasto = '4314902' -- Código do município de Porto Alegre, RS (na estacoes é o id do municipio)
+--and nome_funcao like '%Urbanismo%'
+--and nome_subfuncao like '%infra-estrutura urbana%'
+and valor_pago > 0.0
+and id_municipio_gasto in ('4314902',
+'4315602',
+'4316907',
+'4317103',
+'4317806',
+'4321501',
+'4322400',
+'4317202',
+'4304507',
+'4302808',
+'4315701',
+'4300406',
+'4301602',
+'4307005',
+'4318622',
+'4318002',
+'4315305',
+'4318309',
+'4317400',
+'4321600',
+'4311007',
+'4320800',
+'4303509',
+'4314100',
+'4302105',
+'4311304',
+'4318903',
+'4306106',
+'4308508',
+'4313706',
+'4321352',
+'4304408',
+'4322509',
+'4306601',
+'4321451',
+'4310009',
+'4303905',
+'4322202',
+'4304663',
+'4319802',
+'4306908',
+'4320404',
+'4303608',
+'4317301',
+'4216503',
+'4209003',
+'4204806',
+'4209300',
+'4204202',
+'4203600')
 LIMIT 1000
